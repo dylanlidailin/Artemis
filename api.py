@@ -3,46 +3,53 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
-# … all your LangChain imports …
 
-# load secrets
-from dotenv import load_dotenv
-import os
-
-# core LLM + parsing
-from langchain_openai.chat_models import ChatOpenAI  
+# LangChain imports
+from langchain_openai.chat_models import ChatOpenAI
 from langchain_core.output_parsers import StrOutputParser
-
-# prompt templating
 from langchain.prompts import PromptTemplate
-
-# document loading & splitting
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# embeddings & vector store
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-
-# retrieval + orchestration
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 
-
+# 1) Load your .env and get the key
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
-    raise ValueError("Please set the OPENAI_API_KEY environment variable.")
+    raise RuntimeError("Please set the OPENAI_API_KEY environment variable in .env")
 
-# 1) build your llm, parser, loader, retriever, chain
-llm    = ChatOpenAI(openai_api_key=API_KEY, model_name="gpt-4")
+# 2) Build your RAG chain
+llm = ChatOpenAI(openai_api_key=API_KEY, model_name="gpt-4")
 parser = StrOutputParser()
-loader = PyPDFLoader("Knn and Prob-1.pdf")
-pages  = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=40).split_documents(loader.load_and_split())
-vectorstore = FAISS.from_documents(pages, OpenAIEmbeddings())
-retriever   = vectorstore.as_retriever()
-prompt      = PromptTemplate.from_template(template=question_retriever)
-chain       = RunnableParallel(context=retriever, question=RunnablePassthrough()) | prompt | llm | parser
 
+loader = PyPDFLoader("Knn and Prob-1.pdf")
+docs = loader.load_and_split()
+splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=40)
+pages = splitter.split_documents(docs)
+
+vectorstore = FAISS.from_documents(pages, OpenAIEmbeddings())
+retriever = vectorstore.as_retriever()
+
+question_retriever = """
+You are a helpful assistant. You will be given a question and a context.
+Your task is to answer the question based on the context provided.
+If the context does not contain enough information to answer the question, say "I don't know".
+
+context: {context}
+question: {question}
+"""
+
+prompt = PromptTemplate.from_template(question_retriever)
+chain = (
+    RunnableParallel(context=retriever, question=RunnablePassthrough())
+    | prompt
+    | llm
+    | parser
+)
+
+# 3) Expose it via FastAPI
 app = FastAPI()
 
 class Query(BaseModel):
@@ -50,4 +57,5 @@ class Query(BaseModel):
 
 @app.post("/ask")
 async def ask(q: Query):
-    return {"answer": chain.invoke(q.question)}
+    answer = chain.invoke(q.question)
+    return {"answer": answer}
