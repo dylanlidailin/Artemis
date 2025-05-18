@@ -59,3 +59,7 @@ class Query(BaseModel):
 async def ask(q: Query):
     answer = chain.invoke(q.question)
     return {"answer": answer}
+
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to the PDF-chatbot API. Use POST /ask to query."}
