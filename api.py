@@ -6,6 +6,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from tempfile import NamedTemporaryFile
+from fastapi.staticfiles import StaticFiles
 
 # LangChain imports
 from langchain_openai.chat_models import ChatOpenAI
