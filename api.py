@@ -1,8 +1,10 @@
 # api.py
-from fastapi import FastAPI
-from dotenv import load_dotenv
 import os
-# … your langchain imports …
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from pydantic import BaseModel
+# … all your LangChain imports …
+
 # load secrets
 from dotenv import load_dotenv
 import os
@@ -25,10 +27,27 @@ from langchain_community.vectorstores import FAISS
 # retrieval + orchestration
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
 
+
 load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+if not API_KEY:
+    raise ValueError("Please set the OPENAI_API_KEY environment variable.")
+
+# 1) build your llm, parser, loader, retriever, chain
+llm    = ChatOpenAI(openai_api_key=API_KEY, model_name="gpt-4")
+parser = StrOutputParser()
+loader = PyPDFLoader("Knn and Prob-1.pdf")
+pages  = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=40).split_documents(loader.load_and_split())
+vectorstore = FAISS.from_documents(pages, OpenAIEmbeddings())
+retriever   = vectorstore.as_retriever()
+prompt      = PromptTemplate.from_template(template=question_retriever)
+chain       = RunnableParallel(context=retriever, question=RunnablePassthrough()) | prompt | llm | parser
+
 app = FastAPI()
 
+class Query(BaseModel):
+    question: str
+
 @app.post("/ask")
-async def ask(q: dict):
-    # your chain.invoke code here
-    return {"answer": chain.invoke(q["question"])}
+async def ask(q: Query):
+    return {"answer": chain.invoke(q.question)}
