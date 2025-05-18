@@ -1,0 +1,7 @@
+langchain
+langchain-openai
+python-dotenv
+pypdf
+faiss-cpu
+langchain-community
+uvicorn[standard]
