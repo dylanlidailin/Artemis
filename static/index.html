@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>PDF Chatbot</title>
+  <title>Artem1s</title>
   <meta name="description" content="Upload a PDF and chat with its contents." />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -110,11 +110,31 @@
       opacity: 0.6;
       cursor: default;
     }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📄 PDF Chatbot</h1>
+    <div class="'header">
+        <img
+        src="/static/Artemis.png"
+        alt="Chatbot Avatar"
+        class="avatar"
+      />
+    <h1>📄 Artemis</h1>
+    </div>
 
     <div id="upload">
       <input type="file" id="pdfInput" accept=".pdf" />
