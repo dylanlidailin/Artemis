@@ -120,7 +120,7 @@
   <div class="container">
     <!-- header with your logo -->
     <div class="header">
-      <img src="/static/Artemis.png" alt="Artemis Logo" class="avatar" />
+      <img src="/static/logo.png" alt="Artemis Logo" class="avatar" />
       <h1>Artemis</h1>
     </div>
 
@@ -140,8 +140,41 @@
       <button onclick="ask()">Send</button>
     </div>
   </div>
+  <!-- your existing script, or move this into static/js/app.js and reference it here -->
+  <script>
+    const API = "https://artem1s-ed2ab9bd3a4a.herokuapp.com";
 
-  <!-- your existing front-end logic -->
-  <script src="/static/app.js"></script>
+    async function uploadPDF() {
+      const file = document.getElementById("pdfInput").files[0];
+      if (!file) return alert("Pick a PDF first.");
+      const data = new FormData();
+      data.append("file", file);
+      const btn = event.currentTarget;
+      btn.disabled = true;
+      const res = await fetch(`${API}/upload_pdf`, { method: "POST", body: data });
+      const j = await res.json();
+      document.getElementById("uploadStatus").textContent = j.status;
+      btn.disabled = false;
+    }
+
+    async function ask() {
+      const qEl = document.getElementById("question");
+      const q = qEl.value.trim();
+      if (!q) return;
+      const msgs = document.getElementById("messages");
+      msgs.innerHTML += `<div class="user">You: ${q}</div>`;
+      qEl.value = "";
+      msgs.scrollTop = msgs.scrollHeight;
+
+      const res = await fetch(`${API}/ask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q })
+      });
+      const { answer, error } = await res.json();
+      msgs.innerHTML += `<div class="bot">${error || answer}</div>`;
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  </script>
 </body>
 </html>
