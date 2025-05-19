@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from tempfile import NamedTemporaryFile
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
 # LangChain imports
 from langchain_openai.chat_models import ChatOpenAI
