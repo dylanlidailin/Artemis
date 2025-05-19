@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from pydantic import BaseModel
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import HTMLResponse
