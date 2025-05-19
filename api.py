@@ -1,5 +1,4 @@
-# api.py
-
+# Import libraries
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -18,7 +17,7 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 
-# ─── load API key ─────────────────────────────────────────────────────────────
+# Load API key
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
@@ -26,10 +25,10 @@ if not API_KEY:
 
 llm = ChatOpenAI(openai_api_key=API_KEY, model="gpt-4")
 
-# ─── FastAPI setup ───────────────────────────────────────────────────────────
+# FastAPI setup
 app = FastAPI()
 
-# allow our front-end to call these endpoints
+# Allow front-end to call these endpoints
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,18 +36,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# mount your static folder (index.html, app.js, css, etc.)
+# Mount your static folder (index.html, app.js, css, etc.)
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 
-# ─── serve your original index.html at `/` ────────────────────────────────────
+# Serve your original index.html at `/`
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui():
     html_file = Path(__file__).parent / "static" / "index.html"
     return HTMLResponse(html_file.read_text())
 
 
-# ─── globals to hold the last‐uploaded PDF and its chain ──────────────────────
+# Globals to hold the last‐uploaded PDF and its chain
 current_pdf_path: str | None = None
 rag_chain: RetrievalQA | None = None
 
@@ -68,7 +67,7 @@ def build_chain_from_pdf(path: str) -> RetrievalQA:
     )
 
 
-# ─── upload endpoint to rebuild the chain on demand ───────────────────────────
+# Upload endpoint to rebuild the chain on demand
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     global current_pdf_path, rag_chain
@@ -85,7 +84,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     return {"status": "uploaded", "filename": file.filename}
 
 
-# ─── question endpoint ───────────────────────────────────────────────────────
+# Question endpoint
 class Query(BaseModel):
     question: str
 
@@ -96,6 +95,6 @@ async def ask(q: Query):
     if rag_chain is None:
         return {"error": "No PDF loaded. Please POST /upload_pdf first."}
 
-    # run your RetrievalQA
+    # run  RetrievalQA
     answer = rag_chain.run(q.question)
     return {"answer": answer}
