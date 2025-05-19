@@ -42,6 +42,11 @@ question: {question}
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static", html=True), name="static_files")
 
+@app.get("/", response_class=HTMLResponse)
+async def serve_ui():
+    html_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
+    return open(html_path, "r").read()
+
 # 5) Globals for chain and vectorstore
 chain = None
 vectorstore = None
