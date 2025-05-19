@@ -40,7 +40,7 @@ question: {question}
 
 # 4) Create FastAPI app and serve static frontend
 app = FastAPI()
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/static", StaticFiles(directory="static", html=True), name="static_files")
 
 # 5) Globals for chain and vectorstore
 chain = None
