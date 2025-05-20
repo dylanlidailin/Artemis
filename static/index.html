@@ -5,7 +5,11 @@
   <title>Artemis PDF Chatbot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <!-- Google font (optional) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap"
+    rel="stylesheet"
+  />
 
   <style>
     body {
@@ -121,6 +125,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- header with your logo -->
@@ -129,13 +134,15 @@
       <h1>Artemis</h1>
     </div>
     <p class="subtitle">
-      Upload a PDF document and ask questions about its contents using a GPT-4–powered RetrievalQA chain.
+      Upload a PDF document and ask questions about its contents<br/>
+      using a GPT-4–powered RetrievalQA chain.
     </p>
 
     <!-- PDF Upload -->
     <div id="upload">
       <input type="file" id="pdfInput" accept=".pdf" />
-      <button onclick="uploadPDF()">Upload PDF</button>
+      <!-- pass the event so we can disable the button during upload -->
+      <button onclick="uploadPDF(event)">Upload PDF</button>
       <span id="uploadStatus"></span>
     </div>
 
@@ -152,36 +159,56 @@
   <script>
     const API = "https://artem1s-ed2ab9bd3a4a.herokuapp.com";
 
-    async function uploadPDF() {
-      const file = document.getElementById("pdfInput").files[0];
-      if (!file) return alert("Pick a PDF first.");
-      const data = new FormData();
-      data.append("file", file);
+    async function uploadPDF(event) {
       const btn = event.currentTarget;
       btn.disabled = true;
-      const res = await fetch(`${API}/upload_pdf`, { method: "POST", body: data });
-      const j = await res.json();
-      document.getElementById("uploadStatus").textContent = j.status;
-      btn.disabled = false;
+      const file = document.getElementById("pdfInput").files[0];
+      if (!file) {
+        alert("Pick a PDF first.");
+        btn.disabled = false;
+        return;
+      }
+      const form = new FormData();
+      form.append("file", file);
+
+      try {
+        const res = await fetch(`${API}/upload_pdf`, {
+          method: "POST",
+          body: form
+        });
+        const payload = await res.json();
+        document.getElementById("uploadStatus").textContent = payload.status;
+      } catch (err) {
+        console.error(err);
+        alert("Upload failed.");
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function ask() {
-      const qEl = document.getElementById("question");
-      const q = qEl.value.trim();
+      const input = document.getElementById("question");
+      const q = input.value.trim();
       if (!q) return;
+
       const msgs = document.getElementById("messages");
       msgs.innerHTML += `<div class="user">You: ${q}</div>`;
-      qEl.value = "";
+      input.value = "";
       msgs.scrollTop = msgs.scrollHeight;
 
-      const res = await fetch(`${API}/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q })
-      });
-      const { answer, error } = await res.json();
-      msgs.innerHTML += `<div class="bot">${error || answer}</div>`;
-      msgs.scrollTop = msgs.scrollHeight;
+      try {
+        const res = await fetch(`${API}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: q })
+        });
+        const { answer, error } = await res.json();
+        msgs.innerHTML += `<div class="bot">${error || answer}</div>`;
+        msgs.scrollTop = msgs.scrollHeight;
+      } catch (err) {
+        console.error(err);
+        alert("Failed to get answer.");
+      }
     }
   </script>
 </body>
