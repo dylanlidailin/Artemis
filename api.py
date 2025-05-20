@@ -121,7 +121,7 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     # rebuild the chain
     rag_chain = build_chain_from_pdf(current_pdf_path)
-    return {"status": "uploaded", "filename": file.filename}
+    return {"status": "Uploaded", "filename": file.filename}
 
 
 # Question endpoint
