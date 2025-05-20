@@ -1,4 +1,5 @@
-# Import libraries
+# api.py
+
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -16,6 +17,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
 
 # Load API key
 load_dotenv()
@@ -53,17 +55,55 @@ rag_chain: RetrievalQA | None = None
 
 
 def build_chain_from_pdf(path: str) -> RetrievalQA:
+    # 1) Load & split into smaller chunks
     loader = PyPDFLoader(path)
     docs = loader.load_and_split()
-    pages = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(docs)
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,        # smaller chunks
+        chunk_overlap=100
+    )
+    pages = splitter.split_documents(docs)
+
+    # 2) Embed & index
     embeddings = OpenAIEmbeddings()
     index = FAISS.from_documents(pages, embeddings)
     retriever = index.as_retriever()
+
+    # 3) Map and combine prompts
+    QUESTION_PROMPT = PromptTemplate(
+        template="""
+You are given a question and one document chunk. 
+Produce a concise answer based *only* on that chunk.
+If it doesn’t contain the answer, say “No answer here.”
+Question: {question}
+=========
+Chunk:
+{context}
+""",
+        input_variables=["question", "context"],
+    )
+
+    COMBINE_PROMPT = PromptTemplate(
+        template="""
+You are given the question and multiple intermediate answers.
+Combine them into a final, coherent answer.
+Question: {question}
+Intermediate answers:
+{summaries}
+""",
+        input_variables=["question", "summaries"],
+    )
+
+    # 4) Build a map_reduce RetrievalQA
     return RetrievalQA.from_chain_type(
         llm=llm,
-        chain_type="stuff",
+        chain_type="map_reduce",
         retriever=retriever,
         return_source_documents=False,
+        chain_type_kwargs={
+            "question_prompt": QUESTION_PROMPT,
+            "combine_document_prompt": COMBINE_PROMPT,
+        },
     )
 
 
@@ -95,6 +135,6 @@ async def ask(q: Query):
     if rag_chain is None:
         return {"error": "No PDF loaded. Please POST /upload_pdf first."}
 
-    # run  RetrievalQA
+    # run RetrievalQA
     answer = rag_chain.run(q.question)
     return {"answer": answer}
