@@ -102,7 +102,7 @@ Intermediate answers:
         return_source_documents=False,
         chain_type_kwargs={
             "question_prompt": QUESTION_PROMPT,
-            "combine_document_prompt": COMBINE_PROMPT,
+            "combine_prompt": COMBINE_PROMPT,
         },
     )
 
