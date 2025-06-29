@@ -18,6 +18,7 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain
 
 # Load API key
 load_dotenv()
@@ -123,18 +124,25 @@ async def upload_pdf(file: UploadFile = File(...)):
     rag_chain = build_chain_from_pdf(current_pdf_path)
     return {"status": "Uploaded", "filename": file.filename}
 
+# Question endpoint
+def is_pdf_question(question: str) -> bool:
+    keywords = ["this document", "pdf", "section", "clause", "page", "in the file", "contract"]
+    return any(kw in question.lower() for kw in keywords)
 
 # Question endpoint
 class Query(BaseModel):
     question: str
 
-
 @app.post("/ask")
 async def ask(q: Query):
     global rag_chain
-    if rag_chain is None:
-        return {"error": "No PDF loaded. Please POST /upload_pdf first."}
 
-    # run RetrievalQA
-    answer = rag_chain.run(q.question)
+    if is_pdf_question(q.question):
+        if rag_chain is None:
+            return {"error": "No PDF loaded. Please POST /upload_pdf first."}
+        answer = rag_chain.run(q.question)
+    else:
+        response = llm.invoke(q.question)
+        answer = response.content if hasattr(response, "content") else response
+
     return {"answer": answer}
