@@ -27,6 +27,10 @@
       width: 100%;
       max-width: 800px;
       padding: 2rem;
+      background-color: #f7fafc; /* Light gray background for container */
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-top: 2rem;
     }
     .header {
       display: flex;
@@ -40,11 +44,13 @@
       height: 80px;
       border-radius: 50%;
       object-fit: cover;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     .header h1 {
       font-size: 2.5rem;
       font-weight: 600;
       margin: 0;
+      color: #2d3748;
     }
     .subtitle {
       text-align: center;
@@ -59,29 +65,43 @@
       text-align: center;
       background: white;
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: 8px;
       margin-bottom: 1rem;
+      transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
     }
     #dropZone.dragover {
       background: #e6e6ff;
+      border-color: #434190;
+    }
+    #dropZone.uploaded {
+      border-color: #48bb78; /* Green border for uploaded state */
+      background-color: #f0fff4; /* Light green background */
     }
 
     #messages {
       border: 1px solid #cbd5e0;
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 1rem;
       height: 300px;
       overflow-y: auto;
       background: white;
       margin-bottom: 1rem;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
     }
-    .user {
-      color: silver;
-      margin: 0.5rem 0;
+    .message-item {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #edf2f7;
     }
-    .bot {
-      color: black;
-      margin: 0.5rem 0;
+    .message-item:last-child {
+      border-bottom: none;
+    }
+    .user-message {
+      color: #2d3748; /* Darker color for user */
+      font-weight: 500;
+    }
+    .bot-message {
+      color: #4a5568; /* Slightly lighter color for bot */
+      font-weight: 400;
     }
 
     #inputRow {
@@ -91,29 +111,51 @@
     }
     #question {
       flex: 1;
-      padding: 0.5rem;
+      padding: 0.75rem;
       border: 1px solid #cbd5e0;
-      border-radius: 4px;
+      border-radius: 8px;
       font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s ease-in-out;
     }
-    #inputRow button {
+    #question:focus {
+      border-color: #5a67d8;
+    }
+    .action-button {
       background-color: #5a67d8;
       border: none;
       color: white;
-      padding: 0 1rem;
-      border-radius: 4px;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 1rem;
+      font-weight: 500;
+      transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    #inputRow button:hover {
+    .action-button:hover {
       background-color: #434190;
+      transform: translateY(-1px);
+    }
+    .action-button:active {
+      transform: translateY(0);
+    }
+    .action-button:disabled {
+      background-color: #a0aec0;
+      cursor: not-allowed;
     }
 
-    #loading {
+    #loading, #statusMessage {
       font-weight: bold;
       color: #4a5568;
       text-align: center;
       margin-bottom: 1rem;
+    }
+    #statusMessage.error {
+        color: #e53e3e; /* Red for errors */
+    }
+    #statusMessage.success {
+        color: #38a169; /* Green for success */
     }
   </style>
 </head>
@@ -121,6 +163,7 @@
 <body>
   <div class="container">
     <div class="header">
+      <!-- Assuming Artemis.png is in the static folder on the backend -->
       <img src="/static/Artemis.png" alt="Artemis Logo" class="avatar" />
       <h1>Artemis</h1>
     </div>
@@ -130,8 +173,9 @@
 
     <!-- Drag-and-drop PDF input -->
     <div id="dropZone">
-      <p>Drag & drop a PDF here or click to select</p>
-      <input type="file" id="pdfInput" accept=".pdf" />
+      <p id="dropZoneText">Drag & drop a PDF here or click to select</p>
+      <input type="file" id="pdfInput" accept=".pdf" style="display:none;" />
+      <p id="statusMessage" style="display:none;"></p>
     </div>
 
     <!-- Chat messages -->
@@ -143,85 +187,192 @@
     <!-- Input + send -->
     <div id="inputRow">
       <input type="text" id="question" placeholder="Ask a question…" />
-      <button onclick="ask()">Send</button>
+      <button class="action-button" onclick="ask()" id="sendButton">Send</button>
     </div>
 
     <!-- Clear chat -->
     <div style="text-align: center;">
-      <button onclick="clearHistory()">Clear Chat</button>
+      <button class="action-button" onclick="clearHistory()">Clear Chat</button>
     </div>
   </div>
 
   <script>
-    const API = "https://artem1s-ed2ab9bd3a4a.herokuapp.com";
+    // Set API to empty string to target the same origin (backend served from here)
+    const API = ""; 
+    let pdfUploaded = false; // Flag to track if PDF has been successfully uploaded
 
-    // Load previous chat history
+    // Elements
+    const messagesDiv = document.getElementById("messages");
+    const questionInput = document.getElementById("question");
+    const loadingMessage = document.getElementById("loading");
+    const dropZone = document.getElementById("dropZone");
+    const dropZoneText = document.getElementById("dropZoneText");
+    const pdfInput = document.getElementById("pdfInput");
+    const statusMessage = document.getElementById("statusMessage");
+    const sendButton = document.getElementById("sendButton");
+
+    // Load previous chat history on page load
     window.addEventListener("DOMContentLoaded", () => {
       const history = JSON.parse(localStorage.getItem("artemisHistory")) || [];
-      const msgs = document.getElementById("messages");
       for (const msg of history) {
-        msgs.innerHTML += `<div class="${msg.role}">${msg.role === 'user' ? 'You' : 'Artemis'}: ${msg.text}</div>`;
+        appendMessage(msg.text, msg.role);
       }
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
+    /**
+     * Appends a message to the chat interface.
+     * @param {string} text - The message text.
+     * @param {string} role - The role of the sender ('user' or 'bot').
+     */
+    function appendMessage(text, role) {
+      const messageElement = document.createElement("div");
+      messageElement.classList.add("message-item");
+      messageElement.classList.add(role === 'user' ? "user-message" : "bot-message");
+      messageElement.innerHTML = `<strong>${role === 'user' ? 'You' : 'Artemis'}:</strong> ${text}`;
+      messagesDiv.appendChild(messageElement);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    /**
+     * Displays a status message to the user.
+     * @param {string} message - The message to display.
+     * @param {string} type - The type of message ('success', 'error', 'info').
+     */
+    function showStatus(message, type = 'info') {
+        statusMessage.textContent = message;
+        statusMessage.className = ''; // Clear previous classes
+        statusMessage.classList.add(type);
+        statusMessage.style.display = 'block';
+    }
+
+    /**
+     * Handles PDF file upload.
+     */
+    async function uploadPdf() {
+        const file = pdfInput.files[0];
+        if (!file) return;
+
+        showStatus("Uploading PDF...", 'info');
+        dropZone.classList.remove("uploaded");
+        sendButton.disabled = true; // Disable send button during upload
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch(`${API}/upload_pdf`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.detail || `HTTP error! Status: ${res.status}`);
+            }
+
+            const data = await res.json();
+            if (data.status === "Uploaded") {
+                showStatus(`PDF uploaded: ${data.filename}`, 'success');
+                dropZone.classList.add("uploaded");
+                dropZoneText.textContent = `PDF Ready: ${data.filename}`;
+                pdfUploaded = true;
+            } else {
+                showStatus("PDF upload failed.", 'error');
+            }
+        } catch (err) {
+            console.error("PDF upload error:", err);
+            showStatus(`Error uploading PDF: ${err.message}`, 'error');
+            pdfUploaded = false;
+        } finally {
+            sendButton.disabled = false; // Re-enable send button
+        }
+    }
+
+    /**
+     * Handles sending user questions to the AI agent.
+     */
     async function ask() {
-      const input = document.getElementById("question");
-      const file = document.getElementById("pdfInput").files[0];
-      const q = input.value.trim();
+      const q = questionInput.value.trim();
       if (!q) return;
 
-      const msgs = document.getElementById("messages");
-      msgs.innerHTML += `<div class="user">You: ${q}</div>`;
-      input.value = "";
-      msgs.scrollTop = msgs.scrollHeight;
+      appendMessage(q, 'user');
+      questionInput.value = "";
+      sendButton.disabled = true; // Disable send button while thinking
+      loadingMessage.style.display = "block";
 
-      const form = new FormData();
-      form.append("question", q);
-      if (file) form.append("file", file);
-
-      document.getElementById("loading").style.display = "block";
+      // Clear status message if it's still displayed from a previous PDF action
+      statusMessage.style.display = 'none'; 
 
       try {
         const res = await fetch(`${API}/ask`, {
           method: "POST",
-          body: form
+          headers: {
+            "Content-Type": "application/json" // Ensure correct content type for JSON body
+          },
+          body: JSON.stringify({ question: q }) // Send question as JSON
         });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.detail || `HTTP error! Status: ${res.status}`);
+        }
+
         const { answer, error } = await res.json();
-        const final = error || answer;
+        const finalAnswer = error || answer || "No response from Artemis.";
 
-        msgs.innerHTML += `<div class="bot">Artemis: ${final}</div>`;
-        msgs.scrollTop = msgs.scrollHeight;
+        appendMessage(finalAnswer, 'bot');
 
+        // Update local storage
         let history = JSON.parse(localStorage.getItem("artemisHistory")) || [];
         history.push({ role: "user", text: q });
-        history.push({ role: "bot", text: final });
+        history.push({ role: "bot", text: finalAnswer });
         localStorage.setItem("artemisHistory", JSON.stringify(history));
+
       } catch (err) {
-        console.error(err);
-        alert("Something went wrong.");
+        console.error("Agent query error:", err);
+        // Display error in chat and as a temporary status message
+        appendMessage(`Error: ${err.message}`, 'bot'); 
+        showStatus(`Failed to get response: ${err.message}`, 'error');
       } finally {
-        document.getElementById("loading").style.display = "none";
+        loadingMessage.style.display = "none";
+        sendButton.disabled = false; // Re-enable send button
       }
     }
 
+    /**
+     * Clears the chat history from localStorage and the display.
+     */
     function clearHistory() {
       localStorage.removeItem("artemisHistory");
-      document.getElementById("messages").innerHTML = "";
+      messagesDiv.innerHTML = "";
+      showStatus("Chat history cleared.", 'info');
     }
 
-    // Drag-and-drop PDF support
-    const dropZone = document.getElementById("dropZone");
-    const fileInput = document.getElementById("pdfInput");
+    // Event Listeners for PDF Drag-and-Drop and Selection
+    dropZone.addEventListener("click", () => pdfInput.click()); // Click on drop zone triggers file input
 
-    dropZone.addEventListener("click", () => fileInput.click());
+    pdfInput.addEventListener("change", () => {
+        const file = pdfInput.files[0];
+        if (file && file.type === "application/pdf") {
+            dropZoneText.textContent = `Selected: ${file.name}`;
+            showStatus(`Selected: ${file.name}. Click "Send" or wait for upload.`, 'info'); // Provide feedback
+            uploadPdf(); // Trigger upload immediately on file selection
+        } else {
+            showStatus("Please select a valid PDF file.", 'error');
+            pdfInput.value = ""; // Clear file input
+        }
+    });
 
     dropZone.addEventListener("dragover", (e) => {
       e.preventDefault();
       dropZone.classList.add("dragover");
+      showStatus("Drop your PDF here.", 'info');
     });
 
     dropZone.addEventListener("dragleave", () => {
       dropZone.classList.remove("dragover");
+      statusMessage.style.display = 'none'; // Clear info message on drag leave
     });
 
     dropZone.addEventListener("drop", (e) => {
@@ -230,10 +381,20 @@
 
       const file = e.dataTransfer.files[0];
       if (file && file.type === "application/pdf") {
-        fileInput.files = e.dataTransfer.files;
-        dropZone.querySelector("p").textContent = `Selected: ${file.name}`;
+        pdfInput.files = e.dataTransfer.files; // Assign dropped file to input
+        dropZoneText.textContent = `Selected: ${file.name}`;
+        showStatus(`Selected: ${file.name}. Uploading...`, 'info');
+        uploadPdf(); // Trigger upload immediately on file drop
       } else {
-        alert("Please upload a valid PDF.");
+        showStatus("Please drop a valid PDF file.", 'error');
+      }
+    });
+
+    // Allow sending message with Enter key
+    questionInput.addEventListener("keypress", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Prevent default Enter key behavior (e.g., newline in input)
+        ask();
       }
     });
   </script>
