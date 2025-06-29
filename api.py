@@ -20,6 +20,12 @@ from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
+# To initialize the agent
+from langchain.agents import Tool, initialize_agent
+from langchain.agents.agent_types import AgentType
+from langchain.utilities import DuckDuckGoSearchAPIWrapper
+from langchain.memory import ConversationBufferMemory
+
 # Load API key
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
@@ -54,6 +60,36 @@ async def serve_ui():
 current_pdf_path: str | None = None
 rag_chain: RetrievalQA | None = None
 
+search = DuckDuckGoSearchAPIWrapper()
+
+# Default placeholder function until PDF is loaded
+def run_pdf_qa(q):
+    if rag_chain:
+        return rag_chain.run(q)
+    return "No PDF has been uploaded yet."
+
+tools = [
+    Tool(
+        name="PDF QA",
+        func=run_pdf_qa,
+        description="Useful for answering questions about the uploaded PDF document."
+    ),
+    Tool(
+        name="Web Search",
+        func=search.run,
+        description="Useful for answering general knowledge or current event questions."
+    )
+]
+
+memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+agent_executor = initialize_agent(
+    tools=tools,
+    llm=llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    memory=memory,
+    verbose=True
+)
 
 def build_chain_from_pdf(path: str) -> RetrievalQA:
     # 1) Load & split into smaller chunks
@@ -135,14 +171,8 @@ class Query(BaseModel):
 
 @app.post("/ask")
 async def ask(q: Query):
-    global rag_chain
-
-    if is_pdf_question(q.question):
-        if rag_chain is None:
-            return {"error": "No PDF loaded. Please POST /upload_pdf first."}
-        answer = rag_chain.run(q.question)
-    else:
-        response = llm.invoke(q.question)
-        answer = response.content if hasattr(response, "content") else response
-
+    try:
+        answer = agent_executor.run(q.question)
+    except Exception as e:
+        answer = f"Agent error: {str(e)}"
     return {"answer": answer}
