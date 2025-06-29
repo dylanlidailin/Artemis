@@ -78,6 +78,11 @@ tools = [
         name="Web Search",
         func=search.run,
         description="Useful for answering general knowledge or current event questions."
+    ),
+    Tool(
+        name="General Chat",
+        func=lambda q: llm.invoke(q).content,
+        description="Use this for general conversation or questions not related to PDF or search."
     )
 ]
 
