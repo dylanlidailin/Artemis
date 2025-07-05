@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: duckduckgo_search
-Version: 8.0.4
+Version: 8.0.5
 Summary: Search for words, documents, images, news, maps and text translation using the DuckDuckGo.com search engine.
 Author: deedy5
 License: MIT License
@@ -248,7 +248,7 @@ Exceptions:
 ```python
 def text(
     keywords: str,
-    region: str = "wt-wt",
+    region: str | None = None,
     safesearch: str = "moderate",
     timelimit: str | None = None,
     backend: str = "auto",
@@ -258,7 +258,7 @@ def text(
 
     Args:
         keywords: keywords for query.
-        region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+        region: us-en, uk-en, ru-ru, etc. Defaults to None.
         safesearch: on, moderate, off. Defaults to "moderate".
         timelimit: d, w, m, y. Defaults to None.
         backend: auto, html, lite. Defaults to auto.
@@ -293,7 +293,7 @@ print(results)
 ```python
 def images(
     keywords: str,
-    region: str = "wt-wt",
+    region: str = "us-en",
     safesearch: str = "moderate",
     timelimit: str | None = None,
     size: str | None = None,
@@ -307,7 +307,7 @@ def images(
 
     Args:
         keywords: keywords for query.
-        region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+        region: us-en, uk-en, ru-ru, etc. Defaults to "us-en".
         safesearch: on, moderate, off. Defaults to "moderate".
         timelimit: Day, Week, Month, Year. Defaults to None.
         size: Small, Medium, Large, Wallpaper. Defaults to None.
@@ -360,7 +360,7 @@ print(images)
 ```python
 def videos(
     keywords: str,
-    region: str = "wt-wt",
+    region: str = "us-en",
     safesearch: str = "moderate",
     timelimit: str | None = None,
     resolution: str | None = None,
@@ -372,7 +372,7 @@ def videos(
 
     Args:
         keywords: keywords for query.
-        region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+        region: us-en, uk-en, ru-ru, etc. Defaults to "us-en".
         safesearch: on, moderate, off. Defaults to "moderate".
         timelimit: d, w, m. Defaults to None.
         resolution: high, standart. Defaults to None.
@@ -427,7 +427,7 @@ print(results)
 ```python
 def news(
     keywords: str,
-    region: str = "wt-wt",
+    region: str = "us-en",
     safesearch: str = "moderate",
     timelimit: str | None = None,
     max_results: int | None = None,
@@ -436,7 +436,7 @@ def news(
 
     Args:
         keywords: keywords for query.
-        region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+        region: us-en, uk-en, ru-ru, etc. Defaults to "us-en".
         safesearch: on, moderate, off. Defaults to "moderate".
         timelimit: d, w, m. Defaults to None.
         max_results: max number of results. If None, returns results only from the first response. Defaults to None.

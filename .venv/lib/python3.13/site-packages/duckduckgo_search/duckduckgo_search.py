@@ -137,7 +137,7 @@ class DDGS:
     def text(
         self,
         keywords: str,
-        region: str = "wt-wt",
+        region: str | None = None,
         safesearch: str = "moderate",
         timelimit: str | None = None,
         backend: str = "auto",
@@ -147,7 +147,7 @@ class DDGS:
 
         Args:
             keywords: keywords for query.
-            region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+            region: us-en, uk-en, ru-ru, etc. Defaults to None.
             safesearch: on, moderate, off. Defaults to "moderate".
             timelimit: d, w, m, y. Defaults to None.
             backend: auto, html, lite. Defaults to auto.
@@ -187,7 +187,7 @@ class DDGS:
     def _text_html(
         self,
         keywords: str,
-        region: str = "wt-wt",
+        region: str | None = None,
         timelimit: str | None = None,
         max_results: int | None = None,
     ) -> list[dict[str, str]]:
@@ -202,8 +202,9 @@ class DDGS:
         payload = {
             "q": keywords,
             "b": "",
-            "kl": region,
         }
+        if region:
+            payload["kl"] = region
         if timelimit:
             payload["df"] = timelimit
 
@@ -261,7 +262,7 @@ class DDGS:
     def _text_lite(
         self,
         keywords: str,
-        region: str = "wt-wt",
+        region: str | None = None,
         timelimit: str | None = None,
         max_results: int | None = None,
     ) -> list[dict[str, str]]:
@@ -275,8 +276,10 @@ class DDGS:
 
         payload = {
             "q": keywords,
-            "kl": region,
+            "b": "",
         }
+        if region:
+            payload["kl"] = region
         if timelimit:
             payload["df"] = timelimit
 
@@ -344,7 +347,7 @@ class DDGS:
     def images(
         self,
         keywords: str,
-        region: str = "wt-wt",
+        region: str = "us-en",
         safesearch: str = "moderate",
         timelimit: str | None = None,
         size: str | None = None,
@@ -358,7 +361,7 @@ class DDGS:
 
         Args:
             keywords: keywords for query.
-            region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+            region: us-en, uk-en, ru-ru, etc. Defaults to "us-en".
             safesearch: on, moderate, off. Defaults to "moderate".
             timelimit: Day, Week, Month, Year. Defaults to None.
             size: Small, Medium, Large, Wallpaper. Defaults to None.
@@ -442,7 +445,7 @@ class DDGS:
     def videos(
         self,
         keywords: str,
-        region: str = "wt-wt",
+        region: str = "us-en",
         safesearch: str = "moderate",
         timelimit: str | None = None,
         resolution: str | None = None,
@@ -454,7 +457,7 @@ class DDGS:
 
         Args:
             keywords: keywords for query.
-            region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+            region: us-en, uk-en, ru-ru, etc. Defaults to "us-en".
             safesearch: on, moderate, off. Defaults to "moderate".
             timelimit: d, w, m. Defaults to None.
             resolution: high, standart. Defaults to None.
@@ -512,7 +515,7 @@ class DDGS:
     def news(
         self,
         keywords: str,
-        region: str = "wt-wt",
+        region: str = "us-en",
         safesearch: str = "moderate",
         timelimit: str | None = None,
         max_results: int | None = None,
@@ -521,7 +524,7 @@ class DDGS:
 
         Args:
             keywords: keywords for query.
-            region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+            region: us-en, uk-en, ru-ru, etc. Defaults to "us-en".
             safesearch: on, moderate, off. Defaults to "moderate".
             timelimit: d, w, m. Defaults to None.
             max_results: max number of results. If None, returns results only from the first response. Defaults to None.
