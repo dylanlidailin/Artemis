@@ -19,6 +19,7 @@ executing==2.2.0
 faiss-cpu==1.11.0
 fastapi==0.115.12
 frozenlist==1.6.0
+google_search_results==2.4.2
 h11==0.16.0
 httpcore==1.0.9
 httptools==0.6.4
