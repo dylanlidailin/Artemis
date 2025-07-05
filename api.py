@@ -123,8 +123,6 @@ def run_pdf_qa(q: str) -> str:
         return "No PDF has been uploaded yet."
     return rag_chain.run(q)
 
-search = DuckDuckGoSearchAPIWrapper()
-
 tools = [
     Tool(
         name="PDF QA",
