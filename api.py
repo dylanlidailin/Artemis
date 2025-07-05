@@ -24,7 +24,10 @@ from langchain.utilities import SerpAPIWrapper
 
 from langchain.agents import Tool
 
-search = SerpAPIWrapper()
+load_dotenv()
+SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
+
+search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
 
 search_tool = Tool(
     name="SerpAPI Search",
@@ -33,7 +36,6 @@ search_tool = Tool(
 )
 
 # Load API key
-load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("Please set OPENAI_API_KEY in your .env")
