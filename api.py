@@ -148,7 +148,7 @@ tools = [
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 agent_executor = initialize_agent(
-    tools=[search_tool],
+    tools=tools,
     llm=llm,
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     memory=memory,
