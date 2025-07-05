@@ -14,6 +14,7 @@ dataclasses-json==0.6.7
 debugpy==1.8.14
 decorator==5.2.1
 distro==1.9.0
+duckduckgo_search==8.0.5
 executing==2.2.0
 faiss-cpu==1.11.0
 fastapi==0.115.12
@@ -39,6 +40,7 @@ langchain-core==0.3.60
 langchain-openai==0.3.17
 langchain-text-splitters==0.3.8
 langsmith==0.3.42
+lxml==6.0.0
 marshmallow==3.26.1
 matplotlib-inline==0.1.7
 multidict==6.4.3
@@ -51,6 +53,7 @@ packaging==24.2
 parso==0.8.4
 pexpect==4.9.0
 platformdirs==4.3.8
+primp==0.15.0
 prompt_toolkit==3.0.51
 propcache==0.3.1
 psutil==7.0.0
