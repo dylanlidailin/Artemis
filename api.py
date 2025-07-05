@@ -22,6 +22,14 @@ from langchain.agents.agent_types import AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain.utilities import DuckDuckGoSearchAPIWrapper
 
+from langchain.agents import Tool
+
+search_tool = Tool(
+    name="SerpAPI Search",
+    func=search.run,
+    description="Useful for answering questions about current events or real-time web data"
+)
+
 # Load API key
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
@@ -138,7 +146,7 @@ tools = [
 memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 agent_executor = initialize_agent(
-    tools=tools,
+    tools=[search_tool],
     llm=llm,
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     memory=memory,
