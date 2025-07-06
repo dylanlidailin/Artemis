@@ -24,6 +24,9 @@ from langchain.utilities import SerpAPIWrapper
 
 from langchain.agents import Tool
 
+import uuid
+SESSION_STORE = {}
+
 load_dotenv()
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
 
@@ -110,16 +113,27 @@ Intermediate answers:
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-    global current_pdf_path, rag_chain
-
     suffix = Path(file.filename).suffix or ".pdf"
     with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp.flush()
         current_pdf_path = tmp.name
 
-    rag_chain = build_chain_from_pdf(current_pdf_path)
-    return {"status": "Uploaded", "filename": file.filename}
+    chain = build_chain_from_pdf(current_pdf_path)
+
+    if chain is None:
+        return {"status": "Failed to process PDF."}
+
+    # Generate a session ID
+    session_id = str(uuid.uuid4())
+    SESSION_STORE[session_id] = chain
+
+    return {
+        "status": "Uploaded",
+        "filename": file.filename,
+        "session_id": session_id
+    }
+
 
 # === Agent Setup ===
 def run_pdf_qa(q: str) -> str:
@@ -159,10 +173,20 @@ agent_executor = initialize_agent(
 class Query(BaseModel):
     question: str
 
+class Query(BaseModel):
+    question: str
+    session_id: str  # <-- Add this field
+
 @app.post("/ask")
 async def ask(q: Query):
+    chain = SESSION_STORE.get(q.session_id)
+
+    if chain is None:
+        return {"answer": "Session not found or expired."}
+
     try:
-        answer = agent_executor.run(q.question)
+        answer = chain.run(q.question)
     except Exception as e:
         answer = f"Agent error: {str(e)}"
+
     return {"answer": answer}
