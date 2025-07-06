@@ -1,7 +1,7 @@
 import os
+import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
@@ -17,29 +17,25 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+
 from langchain.agents import Tool, initialize_agent
 from langchain.agents.agent_types import AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain.utilities import SerpAPIWrapper
 
+load_dotenv()
 SESSION_STORE = {}
 
-load_dotenv()
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
-search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
-
-search_tool = Tool(
-    name="SerpAPI Search",
-    func=search.run,
-    description="Useful for answering questions about current events or real-time web data"
-)
-
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("Please set OPENAI_API_KEY in your .env")
 
+search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
+
 llm = ChatOpenAI(openai_api_key=API_KEY, model="gpt-4")
 
+# FastAPI setup
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +50,11 @@ async def serve_ui():
     html_file = Path(__file__).parent / "static" / "index.html"
     return HTMLResponse(html_file.read_text())
 
+# Globals
+current_pdf_path = None
+rag_chain = None
+
+# === PDF QA Tool ===
 def build_chain_from_pdf(path: str) -> RetrievalQA:
     loader = PyPDFLoader(path)
     docs = loader.load_and_split()
@@ -102,19 +103,21 @@ Intermediate answers:
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
+    global current_pdf_path
+    global rag_chain
+
     suffix = Path(file.filename).suffix or ".pdf"
     with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp.flush()
         current_pdf_path = tmp.name
 
-    chain = build_chain_from_pdf(current_pdf_path)
-
-    if chain is None:
+    rag_chain = build_chain_from_pdf(current_pdf_path)
+    if rag_chain is None:
         return {"status": "Failed to process PDF."}
 
     session_id = str(uuid.uuid4())
-    SESSION_STORE[session_id] = chain
+    SESSION_STORE[session_id] = rag_chain
 
     return {
         "status": "Uploaded",
@@ -122,6 +125,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         "session_id": session_id
     }
 
+# === Ask endpoint ===
 class Query(BaseModel):
     question: str
     session_id: str
@@ -129,10 +133,13 @@ class Query(BaseModel):
 @app.post("/ask")
 async def ask(q: Query):
     chain = SESSION_STORE.get(q.session_id)
+
     if chain is None:
         return {"answer": "Session not found or expired."}
+
     try:
         answer = chain.run(q.question)
     except Exception as e:
         answer = f"Agent error: {str(e)}"
+
     return {"answer": answer}

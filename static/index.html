@@ -7,261 +7,216 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <style>
     body {
-      margin: 0;
-      padding: 0;
       font-family: 'Inter', sans-serif;
       background-color: turquoise;
+      margin: 0;
+      padding: 0;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      color: #1a202c;
     }
     .container {
-      width: 100%;
       max-width: 800px;
-      padding: 2rem;
+      width: 100%;
       background-color: #f7fafc;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
       margin-top: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
     .header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-bottom: 0.25rem;
+      text-align: center;
+      margin-bottom: 1rem;
     }
     .avatar {
       width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    .header h1 {
-      font-size: 2.5rem;
-      font-weight: 600;
-      margin: 0;
-      color: #2d3748;
-    }
-    .subtitle {
-      text-align: center;
-      color: #4a5568;
-      margin-bottom: 1.5rem;
-      font-size: 1rem;
+    h1 {
+      margin-top: 0.5rem;
+      font-size: 2rem;
     }
     #dropZone {
       border: 2px dashed #5a67d8;
+      background: white;
       padding: 1rem;
       text-align: center;
-      background: white;
-      cursor: pointer;
       border-radius: 8px;
       margin-bottom: 1rem;
-      transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    }
-    #dropZone.dragover {
-      background: #e6e6ff;
-      border-color: #434190;
     }
     #dropZone.uploaded {
       border-color: #48bb78;
       background-color: #f0fff4;
     }
     #messages {
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      padding: 1rem;
-      height: 300px;
+      height: 250px;
       overflow-y: auto;
-      background: white;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 8px;
       margin-bottom: 1rem;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     .message-item {
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #edf2f7;
+      margin-bottom: 0.5rem;
     }
-    .message-item:last-child {
-      border-bottom: none;
-    }
-    .user-message {
-      color: #2d3748;
-      font-weight: 500;
-    }
-    .bot-message {
-      color: #4a5568;
-      font-weight: 400;
-    }
+    .user-message { font-weight: 600; }
+    .bot-message { color: #4a5568; }
     #inputRow {
       display: flex;
       gap: 0.5rem;
-      margin-bottom: 0.5rem;
     }
-    #question {
+    input[type="text"] {
       flex: 1;
       padding: 0.75rem;
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.2s ease-in-out;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
-    #question:focus {
-      border-color: #5a67d8;
-    }
-    .action-button {
+    button {
       background-color: #5a67d8;
-      border: none;
       color: white;
-      padding: 0.75rem 1.25rem;
-      border-radius: 8px;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 1rem;
-      font-weight: 500;
-      transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    .action-button:hover {
-      background-color: #434190;
-      transform: translateY(-1px);
+    button:disabled {
+      background-color: #aaa;
     }
-    .action-button:active {
-      transform: translateY(0);
-    }
-    .action-button:disabled {
-      background-color: #a0aec0;
-      cursor: not-allowed;
-    }
-    #loading, #statusMessage {
-      font-weight: bold;
-      color: #4a5568;
+    #statusMessage {
       text-align: center;
       margin-bottom: 1rem;
+      font-weight: bold;
     }
-    #statusMessage.error {
-      color: #e53e3e;
-    }
-    #statusMessage.success {
-      color: #38a169;
-    }
+    .success { color: green; }
+    .error { color: red; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <img src="/static/Artemis.png" alt="Artemis Logo" class="avatar" />
+      <img src="/static/Artemis.png" alt="Logo" class="avatar" />
       <h1>Artemis AI Agent</h1>
+      <p>Upload a PDF and ask anything — Artemis will reason, retrieve, or search based on your query.</p>
     </div>
-    <p class="subtitle">Upload a PDF and ask anything — Artemis will reason, retrieve, or search based on your query.</p>
+
     <div id="dropZone">
       <p id="dropZoneText">Drag & drop a PDF here or click to select</p>
-      <input type="file" id="pdfInput" accept=".pdf" style="display:none;" />
-      <p id="statusMessage" style="display:none;"></p>
+      <input type="file" id="pdfInput" accept=".pdf" style="display: none;" />
+      <p id="statusMessage"></p>
     </div>
+
     <div id="messages"></div>
-    <p id="loading" style="display:none;">Thinking...</p>
+
     <div id="inputRow">
       <input type="text" id="question" placeholder="Ask a question…" />
-      <button class="action-button" onclick="ask()" id="sendButton">Send</button>
+      <button onclick="ask()" id="sendBtn">Send</button>
     </div>
-    <div style="text-align: center;">
-      <button class="action-button" onclick="clearHistory()">Clear Chat</button>
+
+    <div style="text-align:center; margin-top: 1rem;">
+      <button onclick="clearHistory()">Clear Chat</button>
     </div>
   </div>
+
   <script>
-    const API = "https://artem1s-ed2ab9bd3a4a.herokuapp.com";
-    let pdfUploaded = false;
+    const API = ""; // e.g., "https://yourapp.herokuapp.com" or leave blank for same origin
     let sessionId = null;
 
-    const messagesDiv = document.getElementById("messages");
-    const questionInput = document.getElementById("question");
-    const loadingMessage = document.getElementById("loading");
+    const pdfInput = document.getElementById("pdfInput");
     const dropZone = document.getElementById("dropZone");
     const dropZoneText = document.getElementById("dropZoneText");
-    const pdfInput = document.getElementById("pdfInput");
+    const messagesDiv = document.getElementById("messages");
+    const questionInput = document.getElementById("question");
     const statusMessage = document.getElementById("statusMessage");
-    const sendButton = document.getElementById("sendButton");
+    const sendBtn = document.getElementById("sendBtn");
+
+    function showStatus(msg, type = "") {
+      statusMessage.textContent = msg;
+      statusMessage.className = type;
+    }
+
+    function appendMessage(text, role) {
+      const div = document.createElement("div");
+      div.classList.add("message-item", role === "user" ? "user-message" : "bot-message");
+      div.textContent = `${role === "user" ? "You" : "Artemis"}: ${text}`;
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 
     async function uploadPdf() {
       const file = pdfInput.files[0];
       if (!file) return;
-      showStatus("Uploading PDF...", 'info');
-      dropZone.classList.remove("uploaded");
-      sendButton.disabled = true;
 
+      showStatus("Uploading PDF...", "");
       const formData = new FormData();
       formData.append("file", file);
 
       try {
         const res = await fetch(`${API}/upload_pdf`, {
           method: "POST",
-          body: formData
+          body: formData,
         });
-
         const data = await res.json();
-
         if (data.status === "Uploaded") {
           sessionId = data.session_id;
-          pdfUploaded = true;
           dropZone.classList.add("uploaded");
           dropZoneText.textContent = `PDF Ready: ${data.filename}`;
-          showStatus("Upload successful!", 'success');
+          showStatus("PDF uploaded successfully.", "success");
         } else {
           throw new Error("Upload failed.");
         }
       } catch (err) {
-        console.error("Upload error:", err);
-        showStatus("Upload failed. " + err.message, 'error');
-      } finally {
-        sendButton.disabled = false;
+        showStatus("Failed to upload PDF.", "error");
+        console.error(err);
       }
     }
 
-    function ask() {
-      const question = questionInput.value.trim();
-      if (!question || !sessionId) return;
-      // add question to message log
-      appendMessage(question, 'user');
-      fetch(`${API}/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, session_id: sessionId })
-      })
-      .then(res => res.json())
-      .then(data => appendMessage(data.answer || "No answer returned.", 'bot'))
-      .catch(err => appendMessage("Error: " + err.message, 'bot'));
-    }
+    async function ask() {
+      const q = questionInput.value.trim();
+      if (!q || !sessionId) {
+        showStatus("Upload a PDF first.", "error");
+        return;
+      }
 
-    function appendMessage(text, role) {
-      const div = document.createElement("div");
-      div.classList.add("message-item", role === 'user' ? "user-message" : "bot-message");
-      div.innerHTML = `<strong>${role === 'user' ? 'You' : 'Artemis'}:</strong> ${text}`;
-      messagesDiv.appendChild(div);
-    }
+      appendMessage(q, "user");
+      questionInput.value = "";
+      sendBtn.disabled = true;
 
-    function showStatus(message, type) {
-      statusMessage.textContent = message;
-      statusMessage.className = type;
-      statusMessage.style.display = 'block';
+      try {
+        const res = await fetch(`${API}/ask`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: q, session_id: sessionId }),
+        });
+        const { answer } = await res.json();
+        appendMessage(answer, "bot");
+      } catch (err) {
+        appendMessage("Error getting answer.", "bot");
+      } finally {
+        sendBtn.disabled = false;
+      }
     }
 
     function clearHistory() {
       messagesDiv.innerHTML = "";
+      showStatus("Chat cleared.");
     }
 
     dropZone.addEventListener("click", () => pdfInput.click());
-
-    pdfInput.addEventListener("change", () => {
-      const file = pdfInput.files[0];
-      if (file && file.type === "application/pdf") {
-        dropZoneText.textContent = `Selected: ${file.name}`;
-        uploadPdf();
-      } else {
-        showStatus("Please select a valid PDF file.", 'error');
-      }
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.style.background = "#e6e6ff";
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.style.background = "white";
+    });
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.style.background = "white";
+      pdfInput.files = e.dataTransfer.files;
+      uploadPdf();
+    });
+    pdfInput.addEventListener("change", uploadPdf);
+    questionInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") ask();
     });
   </script>
 </body>
