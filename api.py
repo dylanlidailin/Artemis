@@ -1,8 +1,6 @@
 import os
-import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import HTMLResponse
@@ -23,15 +21,25 @@ from langchain.agents.agent_types import AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain.utilities import SerpAPIWrapper
 
-load_dotenv()
+import uuid
+
 SESSION_STORE = {}
 
+load_dotenv()
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
+
+search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
+
+search_tool = Tool(
+    name="SerpAPI Search",
+    func=search.run,
+    description="Useful for answering questions about current events or real-time web data"
+)
+
+# Load API key
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("Please set OPENAI_API_KEY in your .env")
-
-search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
 
 llm = ChatOpenAI(openai_api_key=API_KEY, model="gpt-4")
 
@@ -49,10 +57,6 @@ app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 async def serve_ui():
     html_file = Path(__file__).parent / "static" / "index.html"
     return HTMLResponse(html_file.read_text())
-
-# Globals
-current_pdf_path = None
-rag_chain = None
 
 # === PDF QA Tool ===
 def build_chain_from_pdf(path: str) -> RetrievalQA:
@@ -103,21 +107,20 @@ Intermediate answers:
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-    global current_pdf_path
-    global rag_chain
-
     suffix = Path(file.filename).suffix or ".pdf"
     with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp.flush()
-        current_pdf_path = tmp.name
+        path = tmp.name
 
-    rag_chain = build_chain_from_pdf(current_pdf_path)
-    if rag_chain is None:
+    chain = build_chain_from_pdf(path)
+
+    if chain is None:
         return {"status": "Failed to process PDF."}
 
+    # Generate a session ID
     session_id = str(uuid.uuid4())
-    SESSION_STORE[session_id] = rag_chain
+    SESSION_STORE[session_id] = chain
 
     return {
         "status": "Uploaded",
