@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
@@ -16,20 +17,15 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-
 from langchain.agents import Tool, initialize_agent
 from langchain.agents.agent_types import AgentType
 from langchain.memory import ConversationBufferMemory
 from langchain.utilities import SerpAPIWrapper
 
-from langchain.agents import Tool
-
-import uuid
 SESSION_STORE = {}
 
 load_dotenv()
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
-
 search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
 
 search_tool = Tool(
@@ -38,14 +34,12 @@ search_tool = Tool(
     description="Useful for answering questions about current events or real-time web data"
 )
 
-# Load API key
 API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("Please set OPENAI_API_KEY in your .env")
 
 llm = ChatOpenAI(openai_api_key=API_KEY, model="gpt-4")
 
-# FastAPI setup
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -60,11 +54,6 @@ async def serve_ui():
     html_file = Path(__file__).parent / "static" / "index.html"
     return HTMLResponse(html_file.read_text())
 
-# Globals
-current_pdf_path: str | None = None
-rag_chain: RetrievalQA | None = None
-
-# === PDF QA Tool ===
 def build_chain_from_pdf(path: str) -> RetrievalQA:
     loader = PyPDFLoader(path)
     docs = loader.load_and_split()
@@ -124,7 +113,6 @@ async def upload_pdf(file: UploadFile = File(...)):
     if chain is None:
         return {"status": "Failed to process PDF."}
 
-    # Generate a session ID
     session_id = str(uuid.uuid4())
     SESSION_STORE[session_id] = chain
 
@@ -134,59 +122,17 @@ async def upload_pdf(file: UploadFile = File(...)):
         "session_id": session_id
     }
 
-
-# === Agent Setup ===
-def run_pdf_qa(q: str) -> str:
-    if rag_chain is None:
-        return "No PDF has been uploaded yet."
-    return rag_chain.run(q)
-
-tools = [
-    Tool(
-        name="PDF QA",
-        func=run_pdf_qa,
-        description="Answer questions about the uploaded PDF."
-    ),
-    Tool(
-        name="Web Search",
-        func=search.run,
-        description="Look up current or general info from the web."
-    ),
-    Tool(
-        name="General Chat",
-        func=lambda q: llm.invoke(q).content,
-        description="Answer general knowledge or personal questions."
-    )
-]
-
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-agent_executor = initialize_agent(
-    tools=tools,
-    llm=llm,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    memory=memory,
-    verbose=True
-)
-
-# === Ask endpoint ===
 class Query(BaseModel):
     question: str
-
-class Query(BaseModel):
-    question: str
-    session_id: str  # <-- Add this field
+    session_id: str
 
 @app.post("/ask")
 async def ask(q: Query):
     chain = SESSION_STORE.get(q.session_id)
-
     if chain is None:
         return {"answer": "Session not found or expired."}
-
     try:
         answer = chain.run(q.question)
     except Exception as e:
         answer = f"Agent error: {str(e)}"
-
     return {"answer": answer}

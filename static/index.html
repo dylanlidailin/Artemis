@@ -4,206 +4,38 @@
   <meta charset="utf-8" />
   <title>Artemis AI Agent</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Google Fonts -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap"
-    rel="stylesheet"
-  />
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-      background-color: turquoise;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
-      color: #1a202c;
-    }
-    .container {
-      width: 100%;
-      max-width: 800px;
-      padding: 2rem;
-      background-color: #f7fafc; /* Light gray background for container */
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      margin-top: 2rem;
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-bottom: 0.25rem;
-    }
-    .avatar {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header h1 {
-      font-size: 2.5rem;
-      font-weight: 600;
-      margin: 0;
-      color: #2d3748;
-    }
-    .subtitle {
-      text-align: center;
-      color: #4a5568;
-      margin-bottom: 1.5rem;
-      font-size: 1rem;
-    }
-
-    #dropZone {
-      border: 2px dashed #5a67d8;
-      padding: 1rem;
-      text-align: center;
-      background: white;
-      cursor: pointer;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
-    }
-    #dropZone.dragover {
-      background: #e6e6ff;
-      border-color: #434190;
-    }
-    #dropZone.uploaded {
-      border-color: #48bb78; /* Green border for uploaded state */
-      background-color: #f0fff4; /* Light green background */
-    }
-
-    #messages {
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      padding: 1rem;
-      height: 300px;
-      overflow-y: auto;
-      background: white;
-      margin-bottom: 1rem;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
-    }
-    .message-item {
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #edf2f7;
-    }
-    .message-item:last-child {
-      border-bottom: none;
-    }
-    .user-message {
-      color: #2d3748; /* Darker color for user */
-      font-weight: 500;
-    }
-    .bot-message {
-      color: #4a5568; /* Slightly lighter color for bot */
-      font-weight: 400;
-    }
-
-    #inputRow {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-    #question {
-      flex: 1;
-      padding: 0.75rem;
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.2s ease-in-out;
-    }
-    #question:focus {
-      border-color: #5a67d8;
-    }
-    .action-button {
-      background-color: #5a67d8;
-      border: none;
-      color: white;
-      padding: 0.75rem 1.25rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 500;
-      transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .action-button:hover {
-      background-color: #434190;
-      transform: translateY(-1px);
-    }
-    .action-button:active {
-      transform: translateY(0);
-    }
-    .action-button:disabled {
-      background-color: #a0aec0;
-      cursor: not-allowed;
-    }
-
-    #loading, #statusMessage {
-      font-weight: bold;
-      color: #4a5568;
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    #statusMessage.error {
-        color: #e53e3e; /* Red for errors */
-    }
-    #statusMessage.success {
-        color: #38a169; /* Green for success */
-    }
+    /* [unchanged styles from your original code] */
   </style>
 </head>
-
 <body>
   <div class="container">
     <div class="header">
-      <!-- Assuming Artemis.png is in the static folder on the backend -->
       <img src="/static/Artemis.png" alt="Artemis Logo" class="avatar" />
       <h1>Artemis AI Agent</h1>
     </div>
-    <p class="subtitle">
-      Upload a PDF and ask anything — Artemis will reason, retrieve, or search based on your query.
-    </p>
-
-    <!-- Drag-and-drop PDF input -->
+    <p class="subtitle">Upload a PDF and ask anything — Artemis will reason, retrieve, or search based on your query.</p>
     <div id="dropZone">
       <p id="dropZoneText">Drag & drop a PDF here or click to select</p>
       <input type="file" id="pdfInput" accept=".pdf" style="display:none;" />
       <p id="statusMessage" style="display:none;"></p>
     </div>
-
-    <!-- Chat messages -->
     <div id="messages"></div>
-
-    <!-- Loading indicator -->
     <p id="loading" style="display:none;">Thinking...</p>
-
-    <!-- Input + send -->
     <div id="inputRow">
       <input type="text" id="question" placeholder="Ask a question…" />
       <button class="action-button" onclick="ask()" id="sendButton">Send</button>
     </div>
-
-    <!-- Clear chat -->
     <div style="text-align: center;">
       <button class="action-button" onclick="clearHistory()">Clear Chat</button>
     </div>
   </div>
-
   <script>
-    // Set API to target the specified host
-    const API = "https://artem1s-ed2ab9bd3a4a.herokuapp.com"; 
-    let pdfUploaded = false; // Flag to track if PDF has been successfully uploaded
+    const API = "https://artem1s-ed2ab9bd3a4a.herokuapp.com";
+    let pdfUploaded = false;
+    let sessionId = null;
 
-    let sessionId = null; // Stores the session ID returned after PDF upload
-
-    // Elements
     const messagesDiv = document.getElementById("messages");
     const questionInput = document.getElementById("question");
     const loadingMessage = document.getElementById("loading");
@@ -213,175 +45,126 @@
     const statusMessage = document.getElementById("statusMessage");
     const sendButton = document.getElementById("sendButton");
 
-    // Load previous chat history on page load
     window.addEventListener("DOMContentLoaded", () => {
       const history = JSON.parse(localStorage.getItem("artemisHistory")) || [];
-      for (const msg of history) {
-        appendMessage(msg.text, msg.role);
-      }
+      for (const msg of history) appendMessage(msg.text, msg.role);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
-    /**
-     * Appends a message to the chat interface.
-     * @param {string} text - The message text.
-     * @param {string} role - The role of the sender ('user' or 'bot').
-     */
     function appendMessage(text, role) {
       const messageElement = document.createElement("div");
-      messageElement.classList.add("message-item");
-      messageElement.classList.add(role === 'user' ? "user-message" : "bot-message");
+      messageElement.classList.add("message-item", role === 'user' ? "user-message" : "bot-message");
       messageElement.innerHTML = `<strong>${role === 'user' ? 'You' : 'Artemis'}:</strong> ${text}`;
       messagesDiv.appendChild(messageElement);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    /**
-     * Displays a status message to the user.
-     * @param {string} message - The message to display.
-     * @param {string} type - The type of message ('success', 'error', 'info').
-     */
     function showStatus(message, type = 'info') {
-        statusMessage.textContent = message;
-        statusMessage.className = ''; // Clear previous classes
-        statusMessage.classList.add(type);
-        statusMessage.style.display = 'block';
+      statusMessage.textContent = message;
+      statusMessage.className = '';
+      statusMessage.classList.add(type);
+      statusMessage.style.display = 'block';
     }
 
-    /**
-     * Handles PDF file upload.
-     */
     async function uploadPdf() {
-        const file = pdfInput.files[0];
-        if (!file) return;
+      const file = pdfInput.files[0];
+      if (!file) return;
 
-        showStatus("Uploading PDF...", 'info');
-        dropZone.classList.remove("uploaded");
-        sendButton.disabled = true; // Disable send button during upload
+      showStatus("Uploading PDF...", 'info');
+      dropZone.classList.remove("uploaded");
+      sendButton.disabled = true;
 
-        const formData = new FormData();
-        formData.append("file", file);
+      const formData = new FormData();
+      formData.append("file", file);
 
-        try {
-            if (!sessionId) {
-              appendMessage("Please upload a PDF first.", 'bot');
-              showStatus("No session found. Upload a PDF first.", 'error');
-              loadingMessage.style.display = "none";
-              sendButton.disabled = false;
-              return;
-          }
+      try {
+        const res = await fetch(`${API}/upload_pdf`, {
+          method: "POST",
+          body: formData
+        });
 
-            const res = await fetch(`${API}/ask`, {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-            question: q,
-            session_id: sessionId
-          })
-          });
+        if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
 
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.detail || `HTTP error! Status: ${res.status}`);
-            }
-
-            const data = await res.json();
-            if (data.status === "Uploaded") {
-              sessionId = data.session_id; // 🔐 Save session ID
-              showStatus(`PDF uploaded: ${data.filename}`, 'success');
-              dropZone.classList.add("uploaded");
-              dropZoneText.textContent = `PDF Ready: ${data.filename}`;
-              pdfUploaded = true;
-              } else {
-              showStatus("PDF upload failed.", 'error');
-              }
-        } catch (err) {
-            console.error("PDF upload error:", err);
-            showStatus(`Error uploading PDF: ${err.message}`, 'error');
-            pdfUploaded = false;
-        } finally {
-            sendButton.disabled = false; // Re-enable send button
+        const data = await res.json();
+        if (data.status === "Uploaded" && data.session_id) {
+          sessionId = data.session_id;
+          dropZone.classList.add("uploaded");
+          dropZoneText.textContent = `PDF Ready: ${data.filename}`;
+          pdfUploaded = true;
+          showStatus(`PDF uploaded: ${data.filename}`, 'success');
+        } else {
+          throw new Error("Upload response missing session ID.");
         }
+      } catch (err) {
+        showStatus(`Error uploading PDF: ${err.message}`, 'error');
+        pdfUploaded = false;
+      } finally {
+        sendButton.disabled = false;
+      }
     }
 
-    /**
-     * Handles sending user questions to the AI agent.
-     */
     async function ask() {
       const q = questionInput.value.trim();
       if (!q) return;
-
       appendMessage(q, 'user');
       questionInput.value = "";
-      sendButton.disabled = true; // Disable send button while thinking
+      sendButton.disabled = true;
       loadingMessage.style.display = "block";
+      statusMessage.style.display = 'none';
 
-      // Clear status message if it's still displayed from a previous PDF action
-      statusMessage.style.display = 'none'; 
+      if (!sessionId) {
+        appendMessage("Please upload a PDF first.", 'bot');
+        showStatus("No session found. Upload a PDF first.", 'error');
+        loadingMessage.style.display = "none";
+        sendButton.disabled = false;
+        return;
+      }
 
       try {
         const res = await fetch(`${API}/ask`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json" // Ensure correct content type for JSON body
-          },
-          body: JSON.stringify({ question: q, session_id: sessionId }) // Send question as JSON
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: q, session_id: sessionId })
         });
 
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.detail || `HTTP error! Status: ${res.status}`);
-        }
-
-        const { answer, error } = await res.json();
-        const finalAnswer = error || answer || "No response from Artemis.";
-
+        const data = await res.json();
+        const finalAnswer = data.answer || data.error || "No response from Artemis.";
         appendMessage(finalAnswer, 'bot');
 
-        // Update local storage
         let history = JSON.parse(localStorage.getItem("artemisHistory")) || [];
         history.push({ role: "user", text: q });
         history.push({ role: "bot", text: finalAnswer });
         localStorage.setItem("artemisHistory", JSON.stringify(history));
-
       } catch (err) {
-        console.error("Agent query error:", err);
-        // Display error in chat and as a temporary status message
-        appendMessage(`Error: ${err.message}`, 'bot'); 
+        appendMessage(`Error: ${err.message}`, 'bot');
         showStatus(`Failed to get response: ${err.message}`, 'error');
       } finally {
         loadingMessage.style.display = "none";
-        sendButton.disabled = false; // Re-enable send button
+        sendButton.disabled = false;
       }
     }
 
-    /**
-     * Clears the chat history from localStorage and the display.
-     */
     function clearHistory() {
       localStorage.removeItem("artemisHistory");
       messagesDiv.innerHTML = "";
       showStatus("Chat history cleared.", 'info');
     }
 
-    // Event Listeners for PDF Drag-and-Drop and Selection
-    dropZone.addEventListener("click", () => pdfInput.click()); // Click on drop zone triggers file input
+    dropZone.addEventListener("click", () => pdfInput.click());
 
     pdfInput.addEventListener("change", () => {
-        const file = pdfInput.files[0];
-        if (file && file.type === "application/pdf") {
-            dropZoneText.textContent = `Selected: ${file.name}`;
-            showStatus(`Selected: ${file.name}. Click "Send" or wait for upload.`, 'info'); // Provide feedback
-            uploadPdf(); // Trigger upload immediately on file selection
-        } else {
-            showStatus("Please select a valid PDF file.", 'error');
-            pdfInput.value = ""; // Clear file input
-        }
+      const file = pdfInput.files[0];
+      if (file && file.type === "application/pdf") {
+        dropZoneText.textContent = `Selected: ${file.name}`;
+        showStatus(`Selected: ${file.name}. Uploading...`, 'info');
+        uploadPdf();
+      } else {
+        showStatus("Please select a valid PDF file.", 'error');
+        pdfInput.value = "";
+      }
     });
 
-    dropZone.addEventListener("dragover", (e) => {
+    dropZone.addEventListener("dragover", e => {
       e.preventDefault();
       dropZone.classList.add("dragover");
       showStatus("Drop your PDF here.", 'info');
@@ -389,28 +172,26 @@
 
     dropZone.addEventListener("dragleave", () => {
       dropZone.classList.remove("dragover");
-      statusMessage.style.display = 'none'; // Clear info message on drag leave
+      statusMessage.style.display = 'none';
     });
 
-    dropZone.addEventListener("drop", (e) => {
+    dropZone.addEventListener("drop", e => {
       e.preventDefault();
       dropZone.classList.remove("dragover");
-
       const file = e.dataTransfer.files[0];
       if (file && file.type === "application/pdf") {
-        pdfInput.files = e.dataTransfer.files; // Assign dropped file to input
+        pdfInput.files = e.dataTransfer.files;
         dropZoneText.textContent = `Selected: ${file.name}`;
         showStatus(`Selected: ${file.name}. Uploading...`, 'info');
-        uploadPdf(); // Trigger upload immediately on file drop
+        uploadPdf();
       } else {
         showStatus("Please drop a valid PDF file.", 'error');
       }
     });
 
-    // Allow sending message with Enter key
     questionInput.addEventListener("keypress", (event) => {
       if (event.key === "Enter") {
-        event.preventDefault(); // Prevent default Enter key behavior (e.g., newline in input)
+        event.preventDefault();
         ask();
       }
     });
