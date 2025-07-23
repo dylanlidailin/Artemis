@@ -24,7 +24,6 @@ from langchain.utilities import SerpAPIWrapper
 import uuid
 
 SESSION_STORE = {}
-
 load_dotenv()
 SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
 
