@@ -145,3 +145,9 @@ async def ask(q: Query):
         answer = f"Agent error: {str(e)}"
 
     return {"answer": answer}
+
+if __name__ == "__main__":
+    # Render 通常会提供 PORT 环境变量，如果没有则默认使用 8000 端口
+    # 这对于在本地开发和在 Render 上部署都很重要
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
