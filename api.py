@@ -22,6 +22,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain.utilities import SerpAPIWrapper
 
 import uuid
+import uvicorn
 
 SESSION_STORE = {}
 load_dotenv()
@@ -104,28 +105,33 @@ Intermediate answers:
         },
     )
 
+from fastapi import HTTPException
+
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-    suffix = Path(file.filename).suffix or ".pdf"
-    with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(await file.read())
-        tmp.flush()
-        path = tmp.name
+    try:
+        suffix = Path(file.filename).suffix or ".pdf"
+        with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(await file.read())
+            tmp.flush()
+            path = tmp.name
 
-    chain = build_chain_from_pdf(path)
+        chain = build_chain_from_pdf(path)
+        if chain is None:
+            raise HTTPException(status_code=400, detail="无法构建 chain")
 
-    if chain is None:
-        return {"status": "Failed to process PDF."}
+        session_id = str(uuid.uuid4())
+        SESSION_STORE[session_id] = chain
 
-    # Generate a session ID
-    session_id = str(uuid.uuid4())
-    SESSION_STORE[session_id] = chain
+        return {
+            "status": "Uploaded",
+            "filename": file.filename,
+            "session_id": session_id
+        }
 
-    return {
-        "status": "Uploaded",
-        "filename": file.filename,
-        "session_id": session_id
-    }
+    except Exception as e:
+        print("[PDF 处理错误]", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 # === Ask endpoint ===
 class Query(BaseModel):
@@ -146,8 +152,6 @@ async def ask(q: Query):
 
     return {"answer": answer}
 
-if __name__ == "__main__":
-    # Render 通常会提供 PORT 环境变量，如果没有则默认使用 8000 端口
-    # 这对于在本地开发和在 Render 上部署都很重要
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+@app.get("/healthz")
+async def health():
+    return {"status": "ok"}
