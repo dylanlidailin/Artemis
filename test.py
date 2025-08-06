@@ -4,6 +4,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from openai import OpenAI
 
+
 # --- Step 0: Setup ---
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
