@@ -7,19 +7,17 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from langchain_openai import ChatOpenAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-
+from langchain_core.prompts import PromptTemplate
 from langchain.agents import Tool, initialize_agent
 from langchain.agents.agent_types import AgentType
 from langchain.memory import ConversationBufferMemory
-from langchain.utilities import SerpAPIWrapper
+from langchain_community.utilities import SerpAPIWrapper
 
 import uuid
 import uvicorn
@@ -130,7 +128,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        print("[PDF 处理错误]", str(e))
+        print("[PDF analysis error]", str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 # === Ask endpoint ===
