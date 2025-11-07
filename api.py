@@ -13,7 +13,8 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain_core.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate
+
 from langchain.agents import Tool, initialize_agent
 from langchain.agents.agent_types import AgentType
 from langchain.memory import ConversationBufferMemory
@@ -145,6 +146,46 @@ async def ask(q: Query):
 
     try:
         answer = chain.run(q.question)
+    except Exception as e:
+        answer = f"Agent error: {str(e)}"
+
+    return {"answer": answer}
+
+@app.post("/extract_keywords")
+async def extract_keywords(q: Query):
+    chain = SESSION_STORE.get(q.session_id)
+    if chain is None:
+        return {"answer": "Session not found or expired."}
+
+    template = """
+    You are an expert in resume analysis.
+    Analyze the provided resume and extract key skills, technologies, and experience.
+    Format the output as a comma-separated list of keywords.
+
+    Resume content:
+    {context}
+    """
+
+    prompt = PromptTemplate(
+        template=template,
+        input_variables=["context"],
+    )
+
+    try:
+        docs = chain["retriever"].get_relevant_documents(q.question)
+        context = " ".join([doc.page_content for doc in docs])
+
+        parser = StrOutputParser()
+
+        runnable = (
+            {"context": RunnablePassthrough()}
+            | prompt
+            | llm
+            | parser
+        )
+
+        answer = runnable.invoke(context)
+
     except Exception as e:
         answer = f"Agent error: {str(e)}"
 

@@ -112,6 +112,7 @@
     <div id="inputRow">
       <input type="text" id="question" placeholder="Ask a question…" />
       <button class="action-button" onclick="ask()" id="sendButton">Send</button>
+      <button class="action-button" onclick="extractKeywords()">Extract Keywords</button>
     </div>
     <div style="text-align: center;">
       <button class="action-button" onclick="clearHistory()">Clear Chat</button>
@@ -270,6 +271,41 @@
         ask();
       }
     });
+
+    async function extractKeywords() {
+      appendMessage("Extracting keywords...", 'user');
+      sendButton.disabled = true;
+      loadingMessage.style.display = "block";
+      statusMessage.style.display = 'none';
+
+      if (!sessionId) {
+        appendMessage("Please upload a PDF first.", 'bot');
+        showStatus("No session found. Upload a PDF first.", 'error');
+        loadingMessage.style.display = "none";
+        sendButton.disabled = false;
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/extract_keywords`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ question: "extract keywords", session_id: sessionId })
+        });
+
+        const { answer } = await res.json();
+        appendMessage(answer || "No response from Artemis.", 'bot');
+      } catch (err) {
+        console.error("Query error:", err);
+        appendMessage(`Error: ${err.message}`, 'bot');
+        showStatus(`Failed to get response: ${err.message}`, 'error');
+      } finally {
+        loadingMessage.style.display = "none";
+        sendButton.disabled = false;
+      }
+    }
   </script>
 </body>
 </html>
