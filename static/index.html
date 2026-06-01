@@ -30,6 +30,16 @@
     }
     .avatar {
       width: 80px;
+      height: 80px;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: #5a67d8;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
     }
     h1 {
       margin-top: 0.5rem;
@@ -95,10 +105,10 @@
 <body>
   <div class="container">
     <div class="header">
-      <img src="/static/Artemis.png" alt="Artemis Logo" class="avatar" />
+      <div class="avatar" aria-hidden="true">A</div>
       <h1>Artemis AI Agent</h1>
     </div>
-    <p class="subtitle">Upload a PDF and ask anything — Artemis will reason, retrieve, or search based on your query.</p>
+    <p class="subtitle">Upload a PDF and ask questions based on its contents.</p>
 
     <div id="dropZone">
       <p id="dropZoneText">Drag & drop a PDF here or click to select</p>
@@ -120,7 +130,7 @@
   </div>
 
   <script>
-    const API = "https://artemis-1s0t.onrender.com";
+    const API = window.location.origin;
     let sessionId = null;
 
     const messagesDiv = document.getElementById("messages");

@@ -1,8 +1,10 @@
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Any
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,32 +17,28 @@ from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 
-from langchain.agents import Tool, initialize_agent
-from langchain.agents.agent_types import AgentType
-from langchain.memory import ConversationBufferMemory
-from langchain_community.utilities import SerpAPIWrapper
-
 import uuid
-import uvicorn
 
-SESSION_STORE = {}
+
+@dataclass
+class PdfSession:
+    qa_chain: RetrievalQA
+    retriever: Any
+
+
+SESSION_STORE: dict[str, PdfSession] = {}
 load_dotenv()
-SERP_API_KEY = os.getenv("SERPAPI_API_KEY")
 
-search = SerpAPIWrapper(serpapi_api_key=SERP_API_KEY)
 
-search_tool = Tool(
-    name="SerpAPI Search",
-    func=search.run,
-    description="Useful for answering questions about current events or real-time web data"
-)
+def get_openai_api_key() -> str:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Please set OPENAI_API_KEY in your .env")
+    return api_key
 
-# Load API key
-API_KEY = os.getenv("OPENAI_API_KEY")
-if not API_KEY:
-    raise RuntimeError("Please set OPENAI_API_KEY in your .env")
 
-llm = ChatOpenAI(openai_api_key=API_KEY, model="gpt-4")
+def get_llm() -> ChatOpenAI:
+    return ChatOpenAI(openai_api_key=get_openai_api_key(), model="gpt-4")
 
 # FastAPI setup
 app = FastAPI()
@@ -58,16 +56,17 @@ async def serve_ui():
     return HTMLResponse(html_file.read_text())
 
 # === PDF QA Tool ===
-def build_chain_from_pdf(path: str) -> RetrievalQA:
+def build_chain_from_pdf(path: str) -> PdfSession:
     loader = PyPDFLoader(path)
     docs = loader.load_and_split()
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     pages = splitter.split_documents(docs)
 
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(openai_api_key=get_openai_api_key())
     index = FAISS.from_documents(pages, embeddings)
     retriever = index.as_retriever()
+    llm = get_llm()
 
     question_prompt = PromptTemplate(
         template="""
@@ -93,7 +92,7 @@ Intermediate answers:
         input_variables=["question", "summaries"]
     )
 
-    return RetrievalQA.from_chain_type(
+    qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="map_reduce",
         retriever=retriever,
@@ -104,10 +103,11 @@ Intermediate answers:
         },
     )
 
-from fastapi import HTTPException
+    return PdfSession(qa_chain=qa_chain, retriever=retriever)
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
+    path = None
     try:
         suffix = Path(file.filename).suffix or ".pdf"
         with NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -115,12 +115,12 @@ async def upload_pdf(file: UploadFile = File(...)):
             tmp.flush()
             path = tmp.name
 
-        chain = build_chain_from_pdf(path)
-        if chain is None:
+        session = build_chain_from_pdf(path)
+        if session is None:
             raise HTTPException(status_code=400, detail="无法构建 chain")
 
         session_id = str(uuid.uuid4())
-        SESSION_STORE[session_id] = chain
+        SESSION_STORE[session_id] = session
 
         return {
             "status": "Uploaded",
@@ -131,6 +131,12 @@ async def upload_pdf(file: UploadFile = File(...)):
     except Exception as e:
         print("[PDF analysis error]", str(e))
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if path:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
 
 # === Ask endpoint ===
 class Query(BaseModel):
@@ -139,13 +145,13 @@ class Query(BaseModel):
 
 @app.post("/ask")
 async def ask(q: Query):
-    chain = SESSION_STORE.get(q.session_id)
+    session = SESSION_STORE.get(q.session_id)
 
-    if chain is None:
+    if session is None:
         return {"answer": "Session not found or expired."}
 
     try:
-        answer = chain.run(q.question)
+        answer = session.qa_chain.run(q.question)
     except Exception as e:
         answer = f"Agent error: {str(e)}"
 
@@ -153,8 +159,8 @@ async def ask(q: Query):
 
 @app.post("/extract_keywords")
 async def extract_keywords(q: Query):
-    chain = SESSION_STORE.get(q.session_id)
-    if chain is None:
+    session = SESSION_STORE.get(q.session_id)
+    if session is None:
         return {"answer": "Session not found or expired."}
 
     template = """
@@ -172,19 +178,11 @@ async def extract_keywords(q: Query):
     )
 
     try:
-        docs = chain["retriever"].get_relevant_documents(q.question)
+        docs = session.retriever.invoke(q.question)
         context = " ".join([doc.page_content for doc in docs])
 
-        parser = StrOutputParser()
-
-        runnable = (
-            {"context": RunnablePassthrough()}
-            | prompt
-            | llm
-            | parser
-        )
-
-        answer = runnable.invoke(context)
+        response = get_llm().invoke(prompt.format(context=context))
+        answer = getattr(response, "content", str(response))
 
     except Exception as e:
         answer = f"Agent error: {str(e)}"
