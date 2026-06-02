@@ -9,20 +9,19 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_openai.embeddings import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+import pypdf
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
 import uuid
 
 
 @dataclass
 class PdfSession:
-    qa_chain: RetrievalQA
+    llm: ChatGoogleGenerativeAI
     retriever: Any
 
 
@@ -30,15 +29,15 @@ SESSION_STORE: dict[str, PdfSession] = {}
 load_dotenv()
 
 
-def get_openai_api_key() -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
+def get_gemini_api_key() -> str:
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError("Please set OPENAI_API_KEY in your .env")
+        raise RuntimeError("Please set GEMINI_API_KEY in your .env")
     return api_key
 
 
-def get_llm() -> ChatOpenAI:
-    return ChatOpenAI(openai_api_key=get_openai_api_key(), model="gpt-4")
+def get_llm() -> ChatGoogleGenerativeAI:
+    return ChatGoogleGenerativeAI(google_api_key=get_gemini_api_key(), model="gemini-3.5-flash")
 
 # FastAPI setup
 app = FastAPI()
@@ -57,53 +56,28 @@ async def serve_ui():
 
 # === PDF QA Tool ===
 def build_chain_from_pdf(path: str) -> PdfSession:
-    loader = PyPDFLoader(path)
-    docs = loader.load_and_split()
+    from langchain_community.vectorstores import FAISS
+    with open(path, "rb") as pdf_file:
+        reader = pypdf.PdfReader(pdf_file)
+        docs_text = ""
+        for page in reader.pages:
+            docs_text += page.extract_text()
+    
+    from langchain_core.documents import Document
+    docs = [Document(page_content=docs_text)]
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     pages = splitter.split_documents(docs)
 
-    embeddings = OpenAIEmbeddings(openai_api_key=get_openai_api_key())
+    embeddings = HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2"
+    )
+    
     index = FAISS.from_documents(pages, embeddings)
     retriever = index.as_retriever()
     llm = get_llm()
 
-    question_prompt = PromptTemplate(
-        template="""
-You are given a question and one document chunk. 
-Answer concisely based *only* on that chunk.
-If the chunk is irrelevant, respond: "No answer here."
-Question: {question}
-=========
-Chunk:
-{context}
-""",
-        input_variables=["question", "context"]
-    )
-
-    combine_prompt = PromptTemplate(
-        template="""
-You are given a question and multiple intermediate answers.
-Combine them into a final, coherent answer.
-Question: {question}
-Intermediate answers:
-{summaries}
-""",
-        input_variables=["question", "summaries"]
-    )
-
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="map_reduce",
-        retriever=retriever,
-        return_source_documents=False,
-        chain_type_kwargs={
-            "question_prompt": question_prompt,
-            "combine_prompt": combine_prompt,
-        },
-    )
-
-    return PdfSession(qa_chain=qa_chain, retriever=retriever)
+    return PdfSession(llm=llm, retriever=retriever)
 
 @app.post("/upload_pdf")
 async def upload_pdf(file: UploadFile = File(...)):
@@ -151,7 +125,19 @@ async def ask(q: Query):
         return {"answer": "Session not found or expired."}
 
     try:
-        answer = session.qa_chain.run(q.question)
+        docs = session.retriever.invoke(q.question)
+        context = "\n".join([doc.page_content for doc in docs])
+        
+        prompt = PromptTemplate(
+            template="""Answer the question based on this context:
+{context}
+
+Question: {question}""",
+            input_variables=["context", "question"]
+        )
+        
+        chain = prompt | session.llm | StrOutputParser()
+        answer = chain.invoke({"context": context, "question": q.question})
     except Exception as e:
         answer = f"Agent error: {str(e)}"
 
@@ -163,26 +149,24 @@ async def extract_keywords(q: Query):
     if session is None:
         return {"answer": "Session not found or expired."}
 
-    template = """
-    You are an expert in resume analysis.
-    Analyze the provided resume and extract key skills, technologies, and experience.
-    Format the output as a comma-separated list of keywords.
-
-    Resume content:
-    {context}
-    """
-
-    prompt = PromptTemplate(
-        template=template,
-        input_variables=["context"],
-    )
-
     try:
         docs = session.retriever.invoke(q.question)
         context = " ".join([doc.page_content for doc in docs])
 
-        response = get_llm().invoke(prompt.format(context=context))
-        answer = getattr(response, "content", str(response))
+        template = """You are an expert in resume analysis.
+Analyze the provided resume and extract key skills, technologies, and experience.
+Format the output as a comma-separated list of keywords.
+
+Resume content:
+{context}"""
+
+        prompt = PromptTemplate(
+            template=template,
+            input_variables=["context"],
+        )
+
+        chain = prompt | session.llm | StrOutputParser()
+        answer = chain.invoke({"context": context})
 
     except Exception as e:
         answer = f"Agent error: {str(e)}"
